@@ -1,5 +1,5 @@
 # inkex
-Python dependencies for running Inkscape extensions outside of Inkscape
+Python dependencies for running [Inkscape](https://inkscape.org) extensions outside of Inkscape
 
 ----
 
