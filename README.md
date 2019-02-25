@@ -1,6 +1,9 @@
 # ink_extensions
 Python dependencies for running [Inkscape](https://inkscape.org) extensions outside of Inkscape
 
+Use pip to install:
+pip install ink_extensions
+
 https://pypi.org/project/ink-extensions/
 
 ----
