@@ -26,7 +26,11 @@ setup(
         'lxml'
     ],
     extras_require={
-        'dev': [],
-        'test': [],
+        'dev': [
+            'coverage', # coverage run -m unittest discover && coverage html
+        ],
+        'test': [
+            'mock',
+        ],
     },
 )
