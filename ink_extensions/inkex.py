@@ -181,7 +181,10 @@ class Effect:
         # First try to open the file from the function argument
         if filename is not None:
             try:
-                stream = open(filename, 'r')
+                if sys.version_info < (3,):
+                    stream = open(filename, 'r')
+                else:
+                    stream = open(filename, 'r', encoding="utf8")
             except IOError:
                 errormsg(_("Unable to open specified file: %s") % filename)
                 sys.exit()
@@ -190,7 +193,10 @@ class Effect:
         # an object member
         elif self.svg_file is not None:
             try:
-                stream = open(self.svg_file, 'r')
+                if sys.version_info < (3,):
+                    stream = open(self.svg_file, 'r')
+                else:
+                    stream = open(self.svg_file, 'r', encoding="utf8")
             except IOError:
                 errormsg(_("Unable to open object member file: %s") % self.svg_file)
                 sys.exit()
