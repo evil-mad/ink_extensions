@@ -23,7 +23,7 @@ class UserMessageHandlerTestCase(unittest.TestCase):
     def test_init_w_formatter(self, m_errormsg):
         logger = logging.getLogger('test_init_w_formatter')
         format_string = 'a really silly format that discards the actual message'
-        handler = message.UserMessageHandler(logging.Formatter(format_string))
+        handler = message.UserMessageHandler(logging.Formatter(format_string, validate=False))
         logger.addHandler(handler)
 
         logger.info("WEEEOOOWEEEOOOWEEEOOO")
