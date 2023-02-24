@@ -21,34 +21,77 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """
 import re, math
 
+RE_DELIM = re.compile(r'[ \t\r\n,]+')
+RE_COMMAND = re.compile(r'[MLHVCSQTAZmlhvcsqtaz]')
+RE_PARAMETER = re.compile(r'(([-+]?[0-9]+(\.[0-9]*)?|[-+]?\.[0-9]+)([eE][-+]?[0-9]+)?)')
+
+# The following constants taken from inkex module from Inkscape 1.2:
+LEX_REX = re.compile(r"([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)")
+
+DIGIT_REX_PART = r"[0-9]"
+DIGIT_SEQUENCE_REX_PART = rf"(?:{DIGIT_REX_PART}+)"
+INTEGER_CONSTANT_REX_PART = DIGIT_SEQUENCE_REX_PART
+SIGN_REX_PART = r"[+-]"
+EXPONENT_REX_PART = rf"(?:[eE]{SIGN_REX_PART}?{DIGIT_SEQUENCE_REX_PART})"
+FRACTIONAL_CONSTANT_REX_PART = rf"(?:{DIGIT_SEQUENCE_REX_PART}?\.{DIGIT_SEQUENCE_REX_PART}|{DIGIT_SEQUENCE_REX_PART}\.)"
+FLOATING_POINT_CONSTANT_REX_PART = rf"(?:{FRACTIONAL_CONSTANT_REX_PART}{EXPONENT_REX_PART}?|{DIGIT_SEQUENCE_REX_PART}{EXPONENT_REX_PART})"
+NUMBER_REX = re.compile(
+    rf"(?:{SIGN_REX_PART}?{FLOATING_POINT_CONSTANT_REX_PART}|{SIGN_REX_PART}?{INTEGER_CONSTANT_REX_PART})"
+)
+
 def lexPath(d):
     """
     returns and iterator that breaks path data 
     identifies command and parameter tokens
+
+    Note: This function no longer in use by parsePath (the only
+    function that used it), but is left here in case any outside
+    software does make use of it.
     """
     offset = 0
     length = len(d)
-    delim = re.compile(r'[ \t\r\n,]+')
-    command = re.compile(r'[MLHVCSQTAZmlhvcsqtaz]')
-    parameter = re.compile(r'(([-+]?[0-9]+(\.[0-9]*)?|[-+]?\.[0-9]+)([eE][-+]?[0-9]+)?)')
+
     while 1:
-        m = delim.match(d, offset)
+        m = RE_DELIM.match(d, offset)
         if m:
             offset = m.end()
         if offset >= length:
             break
-        m = command.match(d, offset)
+        m = RE_COMMAND.match(d, offset)
         if m:
             yield [d[offset:m.end()], True]
             offset = m.end()
             continue
-        m = parameter.match(d, offset)
+        m = RE_PARAMETER.match(d, offset)
         if m:
             yield [d[offset:m.end()], False]
             offset = m.end()
             continue
         #TODO: create new exception
         raise Exception('Invalid path data!')
+
+def parse_string(path_d):
+    """
+    Parse path string into commands and parameters.
+    Replaces lexPath (with changes made to parsePath).
+    Based on parse_string() in inkex from Inkscape 1.2.
+    """
+    for cmd, numbers in LEX_REX.findall(path_d):
+        args = [float(val) for val in NUMBER_REX.findall(numbers)]
+        numParams = pathdefs[cmd.upper()][1]
+        if cmd.isupper(): # Implicit next command:
+            next_cmd = pathdefs[cmd][0]
+        else:
+            next_cmd = pathdefs[cmd.upper()][0].lower()
+        i = 0
+        while i < len(args) or numParams == 0:
+            if len(args[i : i + numParams]) != numParams:
+                return
+            yield cmd, args[i : i + numParams]
+            i += numParams
+            cmd = next_cmd
+
+
 '''
 pathdefs = {commandfamily:
     [
@@ -77,59 +120,38 @@ def parsePath(d):
     Converts coordinates to absolute.
     """
     retval = []
-    lexer = lexPath(d)
+    lexer = parse_string(d)
 
     pen = (0.0,0.0)
     subPathStart = pen
     lastControl = pen
     lastCommand = ''
-    
+
     while 1:
         try:
-            token, isCommand = next(lexer)
+            cmd, args = next(lexer)
         except StopIteration:
             break
+
+        cmd_upper = cmd.upper()
+        if not lastCommand and cmd_upper != 'M':
+            raise Exception('Invalid path, must begin with moveto.')
+
+        numParams = pathdefs[cmd_upper][1]
         params = []
-        needParam = True
-        if isCommand:
-            if not lastCommand and token.upper() != 'M':
-                raise Exception('Invalid path, must begin with moveto.')
-            else:                
-                command = token
-        else:
-            #command was omited
-            #use last command's implicit next command
-            needParam = False
-            if lastCommand:
-                if lastCommand.isupper():
-                    command = pathdefs[lastCommand][0]
-                else:
-                    command = pathdefs[lastCommand.upper()][0].lower()
-            else:
-                raise Exception('Invalid path, no initial command.')
-        numParams = pathdefs[command.upper()][1]
-        while numParams > 0:
-            if needParam:
-                try: 
-                    token, isCommand = next(lexer)
-                    if isCommand:
-                        raise Exception('Invalid number of parameters')
-                except StopIteration:
-                    raise Exception('Unexpected end of path')
-            cast = pathdefs[command.upper()][2][-numParams]
-            param = cast(token)
-            if command.islower():
-                if pathdefs[command.upper()][3][-numParams]=='x':
+
+        for index, value in enumerate(args):
+            cast = pathdefs[cmd_upper][2][-index]
+            param = cast(value)
+            if cmd.islower():
+                if pathdefs[cmd_upper][3][-index]=='x':
                     param += pen[0]
-                elif pathdefs[command.upper()][3][-numParams]=='y':
+                elif pathdefs[cmd_upper][3][-index]=='y':
                     param += pen[1]
             params.append(param)
-            needParam = True
-            numParams -= 1
-        #segment is now absolute so
-        outputCommand = command.upper()
-    
-        #Flesh out shortcut notation    
+        outputCommand = cmd_upper # Since parameters are now absolute
+
+        #Flesh out shortcut notation
         if outputCommand in ('H','V'):
             if outputCommand == 'H':
                 params.append(pen[1])
@@ -157,7 +179,7 @@ def parsePath(d):
             lastControl = tuple(params[-4:-2])
         else:
             lastControl = pen
-        lastCommand = command
+        lastCommand = cmd_upper
 
         retval.append([outputCommand,params])
     return retval
