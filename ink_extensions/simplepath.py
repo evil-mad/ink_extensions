@@ -70,6 +70,29 @@ def lexPath(d):
         #TODO: create new exception
         raise Exception('Invalid path data!')
 
+implicit_next_cmds = {
+    'M':'L',
+    'm':'l',
+    'L':'L',
+    'l':'l',
+    'H':'H',
+    'h':'h',
+    'V':'V',
+    'v':'v',
+    'C':'C',
+    'c':'c',
+    'S':'S',
+    's':'s',
+    'Q':'Q',
+    'q':'q',
+    'T':'T',
+    't':'t',
+    'A':'A',
+    'a':'a',
+    'Z':'L',
+    'z':'l'
+    }
+
 def parse_string(path_d):
     """
     Parse path string into commands and parameters.
@@ -79,10 +102,7 @@ def parse_string(path_d):
     for cmd, numbers in LEX_REX.findall(path_d):
         args = [float(val) for val in NUMBER_REX.findall(numbers)]
         numParams = pathdefs[cmd.upper()][1]
-        if cmd.isupper(): # Implicit next command:
-            next_cmd = pathdefs[cmd][0]
-        else:
-            next_cmd = pathdefs[cmd.upper()][0].lower()
+        next_cmd = implicit_next_cmds[cmd]
         i = 0
         while i < len(args) or numParams == 0:
             if len(args[i : i + numParams]) != numParams:
