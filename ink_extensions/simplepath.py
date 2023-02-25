@@ -70,7 +70,7 @@ def lexPath(d):
         #TODO: create new exception
         raise Exception('Invalid path data!')
 
-implicit_next_cmds = {
+IMPLICIT_NEXT_CMDS = {
     'M':'L',
     'm':'l',
     'L':'L',
@@ -102,7 +102,7 @@ def parse_string(path_d):
     for cmd, numbers in LEX_REX.findall(path_d):
         args = [float(val) for val in NUMBER_REX.findall(numbers)]
         numParams = pathdefs[cmd.upper()][1]
-        next_cmd = implicit_next_cmds[cmd]
+        next_cmd = IMPLICIT_NEXT_CMDS[cmd]
         i = 0
         while i < len(args) or numParams == 0:
             if len(args[i : i + numParams]) != numParams:
@@ -110,7 +110,6 @@ def parse_string(path_d):
             yield cmd, args[i : i + numParams]
             i += numParams
             cmd = next_cmd
-
 
 '''
 pathdefs = {commandfamily:
@@ -133,6 +132,9 @@ pathdefs = {
     'A':['A', 7, [float, float, float, int, int, float, float], ['r','r','a',0,'s','x','y']], 
     'Z':['L', 0, [], []]
     }
+
+LOWER_CMDS = set(['m', 'l', 'h', 'v', 'c', 's', 'q', 't', 'a', 'z'])
+
 def parsePath(d):
     """
     Parse SVG path and return an array of segments.
@@ -152,7 +154,6 @@ def parsePath(d):
             cmd, args = next(lexer)
         except StopIteration:
             break
-
         cmd_upper = cmd.upper()
         if not lastCommand and cmd_upper != 'M':
             raise Exception('Invalid path, must begin with moveto.')
@@ -163,7 +164,7 @@ def parsePath(d):
         for index, value in enumerate(args):
             cast = pathdefs[cmd_upper][2][-index]
             param = cast(value)
-            if cmd.islower():
+            if cmd in LOWER_CMDS:
                 if pathdefs[cmd_upper][3][-index]=='x':
                     param += pen[0]
                 elif pathdefs[cmd_upper][3][-index]=='y':
