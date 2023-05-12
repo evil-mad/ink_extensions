@@ -110,6 +110,7 @@ def parse_string(path_d):
             yield cmd, args[i : i + numParams]
             i += numParams
             cmd = next_cmd
+            numParams = pathdefs[cmd.upper()][1]
 
 '''
 pathdefs = {commandfamily:
