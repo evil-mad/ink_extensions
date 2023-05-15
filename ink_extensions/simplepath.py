@@ -163,12 +163,12 @@ def parsePath(d):
         params = []
 
         for index, value in enumerate(args):
-            cast = pathdefs[cmd_upper][2][-index]
+            cast = pathdefs[cmd_upper][2][index]
             param = cast(value)
             if cmd in LOWER_CMDS:
-                if pathdefs[cmd_upper][3][-index]=='x':
+                if pathdefs[cmd_upper][3][index]=='x':
                     param += pen[0]
-                elif pathdefs[cmd_upper][3][-index]=='y':
+                elif pathdefs[cmd_upper][3][index]=='y':
                     param += pen[1]
             params.append(param)
         outputCommand = cmd_upper # Since parameters are now absolute

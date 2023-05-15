@@ -16,7 +16,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='ink_extensions',
-    version='1.3.1',
+    version='1.3.2',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/evil-mad/ink_extensions',
