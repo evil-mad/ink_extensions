@@ -26,13 +26,14 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """
+import argparse
 import copy
 import gettext
-import optparse
 import os
 import random
 import re
 import sys
+
 from math import *
 
 # a dictionary of all of the xmlns prefixes in a standard inkscape doc
@@ -122,27 +123,22 @@ except ImportError as e:
     sys.exit()
 
 
-def check_inkbool(option, opt, value):
-    if str(value).capitalize() == 'True':
-        return True
-    elif str(value).capitalize() == 'False':
-        return False
-    else:
-        raise optparse.OptionValueError("option %s: invalid inkbool value: %s" % (opt, value))
+def boolean_option(value):
+    ''' use for boolean options added to an argparse.ArgumentParser, like:
 
+        parser.add_argument("--flag", type=boolean_option)
+    '''
+    if str(value).upper() == "TRUE":
+        return True
+    elif str(value).upper() == "FALSE":
+        return False
+    raise argparse.ArgumentError("Value of argument must be TRUE or FALSE")
 
 def addNS(tag, ns=None):
     val = tag
     if ns is not None and len(ns) > 0 and ns in NSS and len(tag) > 0 and tag[0] != '{':
         val = "{%s}%s" % (NSS[ns], tag)
     return val
-
-
-class InkOption(optparse.Option):
-    TYPES = optparse.Option.TYPES + ("inkbool",)
-    TYPE_CHECKER = copy.copy(optparse.Option.TYPE_CHECKER)
-    TYPE_CHECKER["inkbool"] = check_inkbool
-
 
 class Effect:
     """A class for creating Inkscape SVG Effects"""
@@ -154,14 +150,15 @@ class Effect:
         self.selected = {}
         self.doc_ids = {}
         self.options = None
-        self.args = None
-        self.OptionParser = optparse.OptionParser(usage="usage: %prog [options] SVGfile",
-                                                  option_class=InkOption)
-        self.OptionParser.add_option("--id",
-                        action="append", type="string", dest="ids", default=[], 
+
+        self.arg_parser = argparse.ArgumentParser(
+                parents=kwargs.get('common_options', []),
+                usage="usage: %(prog)s [options] input_file")
+        self.arg_parser.add_argument("--id",
+                        action="append", type=str, dest="ids", default=[],
                         help="id attribute of object to manipulate")
-        self.OptionParser.add_option("--selected-nodes",
-                        action="append", type="string", dest="selected_nodes", default=[], 
+        self.arg_parser.add_argument("--selected-nodes",
+                        action="append", type=str, dest="selected_nodes", default=[],
                         help="id:subpath:position of selected nodes, if any")
         # TODO write a parser for this
 
@@ -173,7 +170,7 @@ class Effect:
 
     def getoptions(self,args=sys.argv[1:]):
         """Collect command line arguments"""
-        self.options, self.args = self.OptionParser.parse_args(args)
+        self.options = self.arg_parser.parse_args(args)
 
     def parse(self, filename=None):
         """Parse document in specified file or on stdin"""
@@ -283,7 +280,7 @@ class Effect:
         """Affect an SVG document with a callback effect"""
         self.svg_file = args[-1]
         localize()
-        self.getoptions(args)
+        self.getoptions(args[:-1]) # not the last term, because that's now in self.svg_file
         self.parse()
         self.getposinlayer()
         self.getselected()
