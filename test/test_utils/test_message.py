@@ -18,7 +18,7 @@ class UserMessageHandlerTestCase(unittest.TestCase):
 
         logger.info(a_message)
 
-        m_errormsg.error_msg.called_once_with(a_message) # message is unchanged (default formatter)
+        m_errormsg.error_msg.assert_called_once_with(a_message) # message is unchanged (default formatter)
 
     def test_init_w_formatter(self, m_errormsg):
         logger = logging.getLogger('test_init_w_formatter')
@@ -28,7 +28,7 @@ class UserMessageHandlerTestCase(unittest.TestCase):
 
         logger.info("WEEEOOOWEEEOOOWEEEOOO")
 
-        m_errormsg.error_msg.called_once_with(format_string)
+        m_errormsg.error_msg.assert_called_once_with(format_string)
 
     @patch.object(message.UserMessageHandler, "format")
     @patch.object(message, "emit")
