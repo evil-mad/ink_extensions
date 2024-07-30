@@ -20,6 +20,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/evil-mad/ink_extensions',
+    authors='Windell Oskay, Anna S Berleant, Claudia Pellegrino'
 
     packages=find_packages(exclude=['contrib', 'docs', 'test', 'test.*']),
     install_requires=[
