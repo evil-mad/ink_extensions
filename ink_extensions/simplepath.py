@@ -112,6 +112,34 @@ def parse_string(path_d):
             cmd = next_cmd
             numParams = pathdefs[cmd.upper()][1]
 
+def parse_string2(path_d):
+    """
+    Optimized version of parse_string with same interface.
+    Eliminates cmd.upper() calls and caches lookups for better performance.
+    """
+    for cmd, numbers in LEX_REX.findall(path_d):
+        args = [float(val) for val in NUMBER_REX.findall(numbers)]
+        args_len = len(args)  # Cache length
+        
+        # Cache lookups (eliminates cmd.upper() calls)
+        pathdef = pathdefs2[cmd]         # Direct lookup, no upper()
+        numParams = pathdef[1]
+        next_cmd = IMPLICIT_NEXT_CMDS[cmd]
+        
+        i = 0
+        while i < args_len or numParams == 0:
+            # Bounds check without slice creation
+            if i + numParams > args_len:
+                return
+            
+            yield cmd, args[i : i + numParams]  # Only slice when yielding
+            i += numParams
+            cmd = next_cmd
+            
+            # Use cached lookup for next iteration
+            pathdef = pathdefs2[cmd]
+            numParams = pathdef[1]
+
 '''
 pathdefs = {commandfamily:
     [
@@ -134,6 +162,30 @@ pathdefs = {
     'Z':['L', 0, [], []]
     }
 
+# Optimized pathdefs with both upper and lowercase keys to eliminate cmd.upper() calls
+pathdefs2 = {
+    'M':['L', 2, [float, float], ['x','y']], 
+    'm':['l', 2, [float, float], ['x','y']], 
+    'L':['L', 2, [float, float], ['x','y']], 
+    'l':['l', 2, [float, float], ['x','y']], 
+    'H':['H', 1, [float], ['x']], 
+    'h':['h', 1, [float], ['x']], 
+    'V':['V', 1, [float], ['y']], 
+    'v':['v', 1, [float], ['y']], 
+    'C':['C', 6, [float, float, float, float, float, float], ['x','y','x','y','x','y']], 
+    'c':['c', 6, [float, float, float, float, float, float], ['x','y','x','y','x','y']], 
+    'S':['S', 4, [float, float, float, float], ['x','y','x','y']], 
+    's':['s', 4, [float, float, float, float], ['x','y','x','y']], 
+    'Q':['Q', 4, [float, float, float, float], ['x','y','x','y']], 
+    'q':['q', 4, [float, float, float, float], ['x','y','x','y']], 
+    'T':['T', 2, [float, float], ['x','y']], 
+    't':['t', 2, [float, float], ['x','y']], 
+    'A':['A', 7, [float, float, float, int, int, float, float], ['r','r','a',0,'s','x','y']], 
+    'a':['a', 7, [float, float, float, int, int, float, float], ['r','r','a',0,'s','x','y']], 
+    'Z':['L', 0, [], []], 
+    'z':['l', 0, [], []]
+    }
+
 LOWER_CMDS = set(['m', 'l', 'h', 'v', 'c', 's', 'q', 't', 'a', 'z'])
 
 def parsePath(d):
@@ -144,6 +196,75 @@ def parsePath(d):
     """
     retval = []
     lexer = parse_string(d)
+
+    pen = (0.0,0.0)
+    subPathStart = pen
+    lastControl = pen
+    lastCommand = ''
+
+    while 1:
+        try:
+            cmd, args = next(lexer)
+        except StopIteration:
+            break
+        cmd_upper = cmd.upper()
+        if not lastCommand and cmd_upper != 'M':
+            raise Exception('Invalid path, must begin with moveto.')
+
+        numParams = pathdefs[cmd_upper][1]
+        params = []
+
+        for index, value in enumerate(args):
+            cast = pathdefs[cmd_upper][2][index]
+            param = cast(value)
+            if cmd in LOWER_CMDS:
+                if pathdefs[cmd_upper][3][index]=='x':
+                    param += pen[0]
+                elif pathdefs[cmd_upper][3][index]=='y':
+                    param += pen[1]
+            params.append(param)
+        outputCommand = cmd_upper # Since parameters are now absolute
+
+        #Flesh out shortcut notation
+        if outputCommand in ('H','V'):
+            if outputCommand == 'H':
+                params.append(pen[1])
+            if outputCommand == 'V':
+                params.insert(0,pen[0])
+            outputCommand = 'L'
+        if outputCommand in ('S','T'):
+            params.insert(0,pen[1]+(pen[1]-lastControl[1]))
+            params.insert(0,pen[0]+(pen[0]-lastControl[0]))
+            if outputCommand == 'S':
+                outputCommand = 'C'
+            if outputCommand == 'T':
+                outputCommand = 'Q'
+
+        #current values become "last" values
+        if outputCommand == 'M':
+            subPathStart = tuple(params[0:2])
+            pen = subPathStart
+        if outputCommand == 'Z':
+            pen = subPathStart
+        else:
+            pen = tuple(params[-2:])
+
+        if outputCommand in ('Q','C'):
+            lastControl = tuple(params[-4:-2])
+        else:
+            lastControl = pen
+        lastCommand = cmd_upper
+
+        retval.append([outputCommand,params])
+    return retval
+
+def parsePath2(d):
+    """
+    Optimized version of parsePath using parse_string2.
+    Maintains exact same behavior and interface as parsePath.
+    """
+    retval = []
+    lexer = parse_string2(d)  # Use optimized parser
 
     pen = (0.0,0.0)
     subPathStart = pen
