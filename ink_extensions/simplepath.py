@@ -120,7 +120,7 @@ def parse_string(path_d):
 
 def parse_string2(path_d):
     """
-    Improved version using ASCII command encoding and pre-computed lookups.
+    Parse SVG path string using ASCII command encoding and pre-computed lookups.
     Returns (ascii_cmd, args) tuples for internal processing.
     """
     for cmd_str, numbers in LEX_REX.findall(path_d):
@@ -136,7 +136,7 @@ def parse_string2(path_d):
 
         i = 0
         while i < args_len or numParams == 0:
-            # Fast bounds check
+            # Bounds check
             if i + numParams > args_len:
                 return
 
@@ -173,11 +173,11 @@ pathdefs = {
     }
 
 
-# ASCII-based command encoding for maximum performance and clarity
+# ASCII-based command encoding for efficient processing
 # Using ASCII values directly: 'A'=65, 'a'=97, etc.
 # Uppercase (absolute) commands: 65-90, Lowercase (relative) commands: 97-122
-# This enables fast relative detection: cmd > 96
-# And direct conversion without lookups: chr(cmd) gives the letter
+# Enables relative detection: cmd > 96
+# Direct conversion available: chr(cmd) gives the letter
 
 # Format: {ascii_code: [next_ascii_code, param_count, [cast_funcs], [coord_types]]}
 pathdefs_numeric = {
@@ -205,8 +205,7 @@ pathdefs_numeric = {
     122: [108, 0, [], []]                        # 'z' -> 'l'
 }
 
-# Pre-computed lookup tables
-# Eliminates list indexing operations in the hot path
+# Pre-computed lookup tables for efficient processing
 CMD_PARAM_COUNTS = {ascii_val: pathdef[1] for ascii_val, pathdef in pathdefs_numeric.items()}
 CMD_NEXT_CMDS = {ascii_val: pathdef[0] for ascii_val, pathdef in pathdefs_numeric.items()}
 
@@ -286,8 +285,8 @@ def parsePath(d):
 
 def parsePath2(d):
     """
-    Improved version using ASCII encoding throughout.
-    Eliminates all string comparisons in favor of integer comparisons.
+    Parse SVG path string using ASCII encoding throughout.
+    Uses integer comparisons for efficient command processing.
     Maintains backward compatibility with string commands in output.
     """
     retval = []
@@ -304,7 +303,7 @@ def parsePath2(d):
         except StopIteration:
             break
 
-        # Ultra-fast ASCII uppercase conversion: bit manipulation
+        # ASCII uppercase conversion using bit manipulation
         cmd_upper_ascii = cmd_ascii & ~32 if cmd_ascii > 96 else cmd_ascii
 
         if not lastCommand and cmd_upper_ascii != 77:  # 77 = 'M'
@@ -317,7 +316,7 @@ def parsePath2(d):
         for index, value in enumerate(args):
             cast = pathdef[2][index]
             param = cast(value)
-            # Ultra-fast relative check: cmd_ascii > 96 means lowercase
+            # Relative check: cmd_ascii > 96 means lowercase
             if cmd_ascii > 96:
                 if pathdef[3][index] == 'x':
                     param += pen[0]
