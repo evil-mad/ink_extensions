@@ -162,6 +162,10 @@ def unCubicSuperPath(csp):
 def parsePath(d):
     return CubicSuperPath(simplepath.parsePath(d))
 
+def parsePath2(d):
+    """Optimized version using numeric encoding"""
+    return CubicSuperPath(simplepath.parsePath2(d))
+
 def formatPath(p):
     return simplepath.formatPath(unCubicSuperPath(p))
 

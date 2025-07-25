@@ -16,7 +16,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='ink_extensions',
-    version='2.1.0',
+    version='2.2.0',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/evil-mad/ink_extensions',
@@ -27,7 +27,7 @@ setup(
     ],
     extras_require={
         'dev': [
-            'coverage', # coverage run -m unittest discover && coverage html
+            'coverage',  # coverage run -m unittest discover && coverage html
         ],
         'test': [
             'mock',
