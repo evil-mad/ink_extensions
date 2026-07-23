@@ -175,6 +175,9 @@ class Effect:
     def parse(self, filename=None):
         """Parse document in specified file or on stdin"""
 
+        # Define a variable to store the stream status
+        stream_should_close = False
+
         # First try to open the file from the function argument
         if filename is not None:
             try:
@@ -182,6 +185,7 @@ class Effect:
                     stream = open(filename, 'r')
                 else:
                     stream = open(filename, 'r', encoding="utf8")
+                stream_should_close = True
             except IOError:
                 errormsg(_("Unable to open specified file: %s") % filename)
                 sys.exit()
@@ -194,6 +198,7 @@ class Effect:
                     stream = open(self.svg_file, 'r')
                 else:
                     stream = open(self.svg_file, 'r', encoding="utf8")
+                stream_should_close = True
             except IOError:
                 errormsg(_("Unable to open object member file: %s") % self.svg_file)
                 sys.exit()
@@ -203,10 +208,13 @@ class Effect:
         else:
             stream = sys.stdin
 
-        p = etree.XMLParser(huge_tree=True)
-        self.document = etree.parse(stream, parser=p)
-        self.original_document = copy.deepcopy(self.document)
-        stream.close()
+        try:
+            p = etree.XMLParser(huge_tree=True)
+            self.document = etree.parse(stream, parser=p)
+            self.original_document = copy.deepcopy(self.document)
+        finally:
+            if stream_should_close:
+                stream.close()
 
     # defines view_center in terms of document units
     def getposinlayer(self):
